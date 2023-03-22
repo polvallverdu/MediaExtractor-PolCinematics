@@ -21,4 +21,16 @@ public class VideoExtractor extends Extractor {
         Java2DFrameConverter converter = new Java2DFrameConverter();
         return converter.convert(frame);
     }
+
+    public BufferedImage getFrameImageByMili(long mili) {
+        return this.getFrameImage(miliToFrame(mili));
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
 }

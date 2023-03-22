@@ -3,6 +3,7 @@ package dev.polv.mediaextractor;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +75,13 @@ public abstract class Extractor {
         this.cacheCheck();
     }
 
+    /**
+     * @param newTime in milliseconds
+     */
+    public void changeCurrentTime(long newTime) {
+        this.changeCurrentFrame(miliToFrame(newTime));
+    }
+
     public void startCaching() {
         Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
         this.cachingThreads.add(t);
@@ -121,5 +129,39 @@ public abstract class Extractor {
         return frame;
     }
 
+    public Frame getFrameByMili(long time) {
+        return this.getFrame(miliToFrame(time));
+    }
 
+    protected long frameToMili(long frame) {
+        return (long) (frame / (this.framerate / 1000));
+    }
+
+    protected long miliToFrame(long mili) {
+        return (long) (mili * (this.framerate / 1000));
+    }
+
+    public Duration getDuration() {
+        return Duration.ofMillis(frameToMili(this.maxFrameCount));
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public AtomicLong getFrameCount() {
+        return frameCount;
+    }
+
+    public long getMaxFrameCount() {
+        return maxFrameCount;
+    }
+
+    public double getFramerate() {
+        return framerate;
+    }
+
+    public boolean isAudio() {
+        return audio;
+    }
 }

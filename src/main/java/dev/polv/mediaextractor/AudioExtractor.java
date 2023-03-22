@@ -32,4 +32,15 @@ public class AudioExtractor extends Extractor {
         return outBuffer.array();
     }
 
+    public byte[] getAudioBytesByMili(long mili) {
+        return this.getAudioBytes(miliToFrame(mili));
+    }
+
+    public int getSamplerate() {
+        return samplerate;
+    }
+
+    public int getAudioChannels() {
+        return audioChannels;
+    }
 }
