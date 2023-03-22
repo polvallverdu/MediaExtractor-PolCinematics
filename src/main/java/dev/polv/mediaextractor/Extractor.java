@@ -23,12 +23,14 @@ public abstract class Extractor {
     private final double framerate;
 
     private final ConcurrentHashMap<Long, Frame> frameCache;
+    private final ConcurrentHashMap<Long, Long> frameCacheTime;
     private List<Thread> cachingThreads;
     private final boolean audio;
 
     public Extractor(String path, boolean audio) {
         this.path = path;
         this.frameCache = new ConcurrentHashMap<>();
+        this.frameCacheTime = new ConcurrentHashMap<>();
         this.cachingThreads = Collections.synchronizedList(new ArrayList<>());
 
         this.frameGrabber = new FFmpegFrameGrabber(path);
@@ -61,6 +63,7 @@ public abstract class Extractor {
                     frame = this.frameGrabber.grabImage();
                 }
                 this.frameCache.put(frameCount, frame);
+                this.frameCacheTime.put(frameCount, System.currentTimeMillis());
             }
             if (this.cachingThreads.size() <= 1) {
                 this.frameGrabber.stop();
@@ -94,6 +97,15 @@ public abstract class Extractor {
             }
             this.cachingThreads.remove(t);
         }).start();
+
+        new Thread(() -> {
+            for (Long frame : new ArrayList<>(this.frameCacheTime.keySet())) {
+                if (System.currentTimeMillis() - this.frameCacheTime.get(frame) > (CACHE_SECONDS*1000*5)) {
+                    this.frameCache.remove(frame);
+                    this.frameCacheTime.remove(frame);
+                }
+            }
+        }).start();
     }
 
     public void cacheCheck() {
@@ -116,15 +128,20 @@ public abstract class Extractor {
 
     public void clearCache() {
         this.frameCache.clear();
+        this.frameCacheTime.clear();
     }
 
     public Frame getFrame(long framen) {
         Frame frame = this.frameCache.get(framen);
+        this.frameCacheTime.put(framen, System.currentTimeMillis());
         if (frame == null) {
             this.changeCurrentFrame(framen);
             this.cacheFramesThread(1);
             frame = this.frameCache.get(framen);
         }
+
+        if (framen+((CACHE_SECONDS*1000)/2) >= this.frameCount.get())
+            this.startCaching();
 
         return frame;
     }
