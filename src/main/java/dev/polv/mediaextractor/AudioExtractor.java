@@ -10,12 +10,16 @@ public class AudioExtractor extends Extractor {
     private final int samplerate;
     private final int audioChannels;
 
+    private long frameCount;
+
 
     public AudioExtractor(String path) {
         super(path, true);
 
         this.samplerate = this.frameGrabber.getSampleRate();
         this.audioChannels = this.frameGrabber.getAudioChannels();
+
+        this.frameCount = 0;
     }
 
     public byte[] getAudioBytes(long framen) {
@@ -36,6 +40,21 @@ public class AudioExtractor extends Extractor {
         return this.getAudioBytes(miliToFrame(mili));
     }
 
+    public byte[] getAudioBytes() {
+        if (this.frameCount == getMaxFrameCount()) {
+            return new byte[1024];
+        }
+        long oldFrameCount = this.frameCount;
+        this.frameCount++;
+        return this.getAudioBytes(oldFrameCount);
+    }
+
+    @Override
+    public void changeCurrentFrame(long newFrame) {
+        this.frameCount = newFrame;
+        super.changeCurrentFrame(newFrame);
+    }
+
     public int getSamplerate() {
         return samplerate;
     }
@@ -43,4 +62,5 @@ public class AudioExtractor extends Extractor {
     public int getAudioChannels() {
         return audioChannels;
     }
+
 }

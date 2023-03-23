@@ -12,6 +12,8 @@ public class VideoExtractor extends Extractor {
     public VideoExtractor(String path) {
         super(path, false);
 
+        this.startCaching();
+
         this.width = this.frameGrabber.getImageWidth();
         this.height = this.frameGrabber.getImageHeight();
     }

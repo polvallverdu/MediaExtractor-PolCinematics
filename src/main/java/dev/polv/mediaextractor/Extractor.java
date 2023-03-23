@@ -34,7 +34,13 @@ public abstract class Extractor {
         this.cachingThreads = Collections.synchronizedList(new ArrayList<>());
 
         this.frameGrabber = new FFmpegFrameGrabber(path);
+        try {
+            this.frameGrabber.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         this.framerate = this.frameGrabber.getFrameRate();
+        //this.maxFrameCount = 9999;
         this.maxFrameCount = this.frameGrabber.getLengthInFrames();
 
         this.audio = audio;
@@ -43,9 +49,9 @@ public abstract class Extractor {
     // Should be runned in a separate thread
     private void cacheFramesThread(int amount) {
         try {
-            if (this.cachingThreads.size() <= 1) {
+            /*if (this.cachingThreads.size() <= 1) {
                 this.frameGrabber.start();
-            }
+            }*/
             for (int i = 0; i < amount; i++) {
                 long frameCount = this.frameCount.getAndIncrement();
                 if (frameCount >= this.maxFrameCount) {
@@ -65,9 +71,9 @@ public abstract class Extractor {
                 this.frameCache.put(frameCount, frame);
                 this.frameCacheTime.put(frameCount, System.currentTimeMillis());
             }
-            if (this.cachingThreads.size() <= 1) {
+            /*if (this.cachingThreads.size() <= 1) {
                 this.frameGrabber.stop();
-            }
+            }*/
         } catch (Exception e) {
             e.printStackTrace();
         }
