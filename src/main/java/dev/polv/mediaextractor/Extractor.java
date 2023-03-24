@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class Extractor {
 
-    private final int CACHE_SECONDS = 10;
+    private final int CACHE_SECONDS = 8;
 
     private final String path;
     protected FFmpegFrameGrabber frameGrabber = null;
@@ -52,9 +52,6 @@ public abstract class Extractor {
     // Should be runned in a separate thread
     private void cacheFramesThread(int amount) {
         try {
-            /*if (this.cachingThreads.size() <= 1) {
-                this.frameGrabber.start();
-            }*/
             for (int i = 0; i < amount; i++) {
                 long frameCount = this.frameCount.getAndIncrement();
                 if (frameCount >= this.maxFrameCount) {
@@ -68,16 +65,14 @@ public abstract class Extractor {
                 //System.out.println("Getting frame " + frameCount);
                 Frame frame;
                 if (this.audio) {
-                    frame = this.frameGrabber.grabSamples();
+                    frame = this.frameGrabber.grabSamples().clone();
                 } else {
-                    frame = this.frameGrabber.grabImage();
+                    frame = this.frameGrabber.grabImage().clone();
                 }
+                System.out.println("Got frame " + frameCount + " " + frame.toString());
                 this.frameCache.put(frameCount, frame);
                 this.frameCacheTime.put(frameCount, System.currentTimeMillis());
             }
-            /*if (this.cachingThreads.size() <= 1) {
-                this.frameGrabber.stop();
-            }*/
         } catch (Exception e) {
             e.printStackTrace();
         }
