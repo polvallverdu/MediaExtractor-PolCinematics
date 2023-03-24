@@ -2,8 +2,10 @@ package dev.polv.mediaextractor;
 
 import org.bytedeco.javacv.Frame;
 
+import javax.sound.sampled.AudioFormat;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
+import java.time.Duration;
 
 public class AudioExtractor extends Extractor {
 
@@ -22,15 +24,23 @@ public class AudioExtractor extends Extractor {
         this.frameCount = 0;
     }
 
+    public AudioFormat getAudioFormat() {
+        return new AudioFormat(this.samplerate, 16, this.audioChannels, true, true);
+    }
+
     public byte[] getAudioBytes(long framen) {
         Frame frame = this.getFrame(framen);
-        ShortBuffer channelSamplesShortBuffer = (ShortBuffer) frame.samples[0];
-        channelSamplesShortBuffer.rewind();
+        if (frame.samples == null || frame.samples.length == 0 || frame.samples[0] == null) {
+            return new byte[4096];
+        }
 
-        final ByteBuffer outBuffer = ByteBuffer.allocate(channelSamplesShortBuffer.capacity() * 2);
+        final ShortBuffer bufferSamples = (ShortBuffer) frame.samples[0];
+        bufferSamples.rewind();
 
-        for (int x = 0; x < channelSamplesShortBuffer.capacity(); x++) {
-            short val = channelSamplesShortBuffer.get(x);
+        final ByteBuffer outBuffer = ByteBuffer.allocate(bufferSamples.capacity() * 2);
+
+        for (int x = 0; x < bufferSamples.capacity(); x++) {
+            short val = bufferSamples.get(x);
             outBuffer.putShort(val);
         }
         return outBuffer.array();
@@ -42,10 +52,11 @@ public class AudioExtractor extends Extractor {
 
     public byte[] getAudioBytes() {
         if (this.frameCount == getMaxFrameCount()) {
-            return new byte[1024];
+            return new byte[4096];
         }
         long oldFrameCount = this.frameCount;
         this.frameCount++;
+        // System.out.println("Fetching frame " + this.frameCount);
         return this.getAudioBytes(oldFrameCount);
     }
 
@@ -62,5 +73,20 @@ public class AudioExtractor extends Extractor {
     public int getAudioChannels() {
         return audioChannels;
     }
+
+    // DEPRECATED FUNCTIONS BECAUSE DOESN'T WORK GREAT WITH AUDIO
+
+    @Override
+    @Deprecated
+    public long getMaxFrameCount() {
+        return super.getMaxFrameCount();
+    }
+
+    @Override
+    @Deprecated
+    public Duration getDuration() {
+        return super.getDuration();
+    }
+
 
 }

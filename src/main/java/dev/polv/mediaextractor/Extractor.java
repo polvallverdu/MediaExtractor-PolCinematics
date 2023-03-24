@@ -21,11 +21,14 @@ public abstract class Extractor {
     private final long maxFrameCount;
 
     private final double framerate;
+    private final double realFramerate;
 
     private final ConcurrentHashMap<Long, Frame> frameCache;
     private final ConcurrentHashMap<Long, Long> frameCacheTime;
     private List<Thread> cachingThreads;
     private final boolean audio;
+
+    public static final int AUDIO_CHUNK_SIZE = 4096;
 
     public Extractor(String path, boolean audio) {
         this.path = path;
@@ -39,9 +42,9 @@ public abstract class Extractor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        this.framerate = this.frameGrabber.getFrameRate();
-        //this.maxFrameCount = 9999;
-        this.maxFrameCount = this.frameGrabber.getLengthInFrames();
+        this.realFramerate = this.frameGrabber.getFrameRate();
+        this.framerate = audio ? this.frameGrabber.getSampleRate() / (double) AUDIO_CHUNK_SIZE : this.realFramerate; // For audio, framerate is the amount of samples per second divided by 4096
+        this.maxFrameCount = this.frameGrabber.getLengthInFrames() == 0 ? Long.MAX_VALUE : this.frameGrabber.getLengthInFrames();
 
         this.audio = audio;
     }
@@ -62,9 +65,10 @@ public abstract class Extractor {
                 if (this.frameCache.containsKey(frameCount))
                     continue;
 
+                //System.out.println("Getting frame " + frameCount);
                 Frame frame;
                 if (this.audio) {
-                    frame = this.frameGrabber.grabFrame(true, false, true, false);
+                    frame = this.frameGrabber.grabSamples();
                 } else {
                     frame = this.frameGrabber.grabImage();
                 }
@@ -92,7 +96,7 @@ public abstract class Extractor {
     }
 
     public void startCaching() {
-        Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
+        /*Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
         this.cachingThreads.add(t);
         t.start();
         new Thread(() -> {
@@ -111,7 +115,12 @@ public abstract class Extractor {
                     this.frameCacheTime.remove(frame);
                 }
             }
-        }).start();
+        }).start();*/
+        // System.out.println("Caching frames");
+        // System.out.println("framerate: " + this.framerate);
+        // System.out.println("maxframe: " + this.maxFrameCount);
+        this.cacheFramesThread(audio ? ((int) (CACHE_SECONDS*framerate)/4096) : ((int) framerate)*CACHE_SECONDS);
+        // System.out.println("Done caching frames. Cache size: " + this.frameCache.size());
     }
 
     public void cacheCheck() {
@@ -141,9 +150,22 @@ public abstract class Extractor {
         Frame frame = this.frameCache.get(framen);
         this.frameCacheTime.put(framen, System.currentTimeMillis());
         if (frame == null) {
-            this.changeCurrentFrame(framen);
+            this.frameCount.set(Math.min(Math.max(framen, 0), this.maxFrameCount));
+            startCaching();
             this.cacheFramesThread(1);
-            frame = this.frameCache.get(framen);
+            while (frame == null) {
+                try {
+                    Thread.sleep(1);
+                    frame = this.frameCache.get(framen);
+                    if (frame != null) {
+                        if (frame.samples == null || frame.samples.length == 0) {
+                            frame = null;
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         if (framen+((CACHE_SECONDS*1000)/2) >= this.frameCount.get())
@@ -157,7 +179,7 @@ public abstract class Extractor {
     }
 
     protected long frameToMili(long frame) {
-        return (long) (frame / (this.framerate / 1000));
+        return (long) (frame / this.realFramerate * 1000);
     }
 
     protected long miliToFrame(long mili) {
@@ -187,4 +209,5 @@ public abstract class Extractor {
     public boolean isAudio() {
         return audio;
     }
+
 }

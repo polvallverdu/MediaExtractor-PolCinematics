@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.polv"
-version = "0.2.2"
+version = "0.3"
 
 repositories {
     mavenCentral()
@@ -16,6 +16,7 @@ repositories {
 
 ext {
     set("javacppPlatform", "linux-x86_64,macosx-x86_64,windows-x86_64,etc")
+    //set("javacppPlatform", "windows-x86_64")
 }
 
 dependencies {
@@ -23,7 +24,10 @@ dependencies {
     implementation("org.bytedeco:ffmpeg-platform:5.1.2-1.5.8")*/
 
 
-    api("org.bytedeco:javacv-platform:${project.extra["javacppVersion"]}")
+    //api("org.bytedeco:javacv:${project.extra["javacppVersion"]}")
+    api("org.bytedeco:javacv-platform:${project.extra["javacppVersion"]}") {
+        exclude(group = "org.bytedeco", module = "opencv-platform")
+    }
     javacppPlatform("org.bytedeco:ffmpeg-platform:6.0-${project.extra["javacppVersion"]}")
 }
 
