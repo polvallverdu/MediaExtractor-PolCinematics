@@ -2,7 +2,10 @@ package dev.polv.mediaextractor;
 
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.Java2DFrameConverter;
 
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,7 +26,7 @@ public abstract class Extractor {
     private final double framerate;
     private final double realFramerate;
 
-    private final ConcurrentHashMap<Long, Frame> frameCache;
+    private final ConcurrentHashMap<Long, Object> frameCache;
     private final ConcurrentHashMap<Long, Long> frameCacheTime;
     private List<Thread> cachingThreads;
     private final boolean audio;
@@ -63,14 +66,44 @@ public abstract class Extractor {
                     continue;
 
                 //System.out.println("Getting frame " + frameCount);
-                Frame frame;
-                if (this.audio) {
-                    frame = this.frameGrabber.grabSamples().clone();
-                } else {
-                    frame = this.frameGrabber.grabImage().clone();
+                Frame ff;
+                while (true) {
+                    if (this.audio) {
+                        ff = this.frameGrabber.grabSamples().clone();
+                    } else {
+                        ff = this.frameGrabber.grabImage().clone();
+                    }
+
+                    if (ff == null || (audio && (ff.samples == null || ff.samples.length == 0)) || (!audio && ff.image == null)) {
+                        try {
+                            Thread.sleep(5);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        continue;
+                    }
+
+                    break;
                 }
-                System.out.println("Got frame " + frameCount + " " + frame.toString());
-                this.frameCache.put(frameCount, frame);
+
+                Object obj;
+                if (this.audio) {
+                    final ShortBuffer bufferSamples = (ShortBuffer) ff.samples[0];
+                    bufferSamples.rewind();
+
+                    final ByteBuffer outBuffer = ByteBuffer.allocate(bufferSamples.capacity() * 2);
+
+                    for (int x = 0; x < bufferSamples.capacity(); x++) {
+                        short val = bufferSamples.get(x);
+                        outBuffer.putShort(val);
+                    }
+                    obj = outBuffer.array();
+                } else {
+                    Java2DFrameConverter c = new Java2DFrameConverter();
+                    obj = c.convert(ff);
+                }
+
+                this.frameCache.put(frameCount, obj);
                 this.frameCacheTime.put(frameCount, System.currentTimeMillis());
             }
         } catch (Exception e) {
@@ -91,9 +124,9 @@ public abstract class Extractor {
     }
 
     public void startCaching() {
-        /*Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
-        this.cachingThreads.add(t);
+        Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
         t.start();
+        /*this.cachingThreads.add(t);
         new Thread(() -> {
             try {
                 t.join();
@@ -101,7 +134,7 @@ public abstract class Extractor {
                 e.printStackTrace();
             }
             this.cachingThreads.remove(t);
-        }).start();
+        }).start();*/
 
         new Thread(() -> {
             for (Long frame : new ArrayList<>(this.frameCacheTime.keySet())) {
@@ -110,11 +143,11 @@ public abstract class Extractor {
                     this.frameCacheTime.remove(frame);
                 }
             }
-        }).start();*/
+        }).start();
         // System.out.println("Caching frames");
         // System.out.println("framerate: " + this.framerate);
         // System.out.println("maxframe: " + this.maxFrameCount);
-        this.cacheFramesThread(audio ? ((int) (CACHE_SECONDS*framerate)/4096) : ((int) framerate)*CACHE_SECONDS);
+        //this.cacheFramesThread(audio ? ((int) (CACHE_SECONDS*framerate)/4096) : ((int) framerate)*CACHE_SECONDS);
         // System.out.println("Done caching frames. Cache size: " + this.frameCache.size());
     }
 
@@ -141,8 +174,8 @@ public abstract class Extractor {
         this.frameCacheTime.clear();
     }
 
-    public Frame getFrame(long framen) {
-        Frame frame = this.frameCache.get(framen);
+    public Object getFrame(long framen) {
+        Object frame = this.frameCache.get(framen);
         this.frameCacheTime.put(framen, System.currentTimeMillis());
         if (frame == null) {
             this.frameCount.set(Math.min(Math.max(framen, 0), this.maxFrameCount));
@@ -152,11 +185,11 @@ public abstract class Extractor {
                 try {
                     Thread.sleep(1);
                     frame = this.frameCache.get(framen);
-                    if (frame != null) {
-                        if (frame.samples == null || frame.samples.length == 0) {
+                    /*if (frame != null) {
+                        if ((audio && (frame.samples == null || frame.samples.length == 0)) || (!audio && frame.image == null)) {
                             frame = null;
                         }
-                    }
+                    }*/
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -169,7 +202,7 @@ public abstract class Extractor {
         return frame;
     }
 
-    public Frame getFrameByMili(long time) {
+    public Object getFrameByMili(long time) {
         return this.getFrame(miliToFrame(time));
     }
 

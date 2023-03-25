@@ -20,8 +20,8 @@ ext {
 }
 
 dependencies {
-   /* implementation("org.bytedeco:javacv-platform:1.5.8")
-    implementation("org.bytedeco:ffmpeg-platform:5.1.2-1.5.8")*/
+    /* implementation("org.bytedeco:javacv-platform:1.5.8")
+     implementation("org.bytedeco:ffmpeg-platform:5.1.2-1.5.8")*/
 
 
     //api("org.bytedeco:javacv:${project.extra["javacppVersion"]}")

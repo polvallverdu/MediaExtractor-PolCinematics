@@ -29,8 +29,8 @@ public class AudioExtractor extends Extractor {
     }
 
     public byte[] getAudioBytes(long framen) {
-        Frame frame = this.getFrame(framen);
-        if (frame.samples == null || frame.samples.length == 0 || frame.samples[0] == null) {
+        byte[] frame = (byte[]) this.getFrame(framen);
+        /*if (frame.samples == null || frame.samples.length == 0 || frame.samples[0] == null) {
             return new byte[4096];
         }
 
@@ -43,7 +43,8 @@ public class AudioExtractor extends Extractor {
             short val = bufferSamples.get(x);
             outBuffer.putShort(val);
         }
-        return outBuffer.array();
+        return outBuffer.array();*/
+        return frame;
     }
 
     public byte[] getAudioBytesByMili(long mili) {
@@ -87,6 +88,5 @@ public class AudioExtractor extends Extractor {
     public Duration getDuration() {
         return super.getDuration();
     }
-
 
 }

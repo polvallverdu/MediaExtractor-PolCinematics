@@ -1,8 +1,5 @@
 package dev.polv.mediaextractor;
 
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.Java2DFrameConverter;
-
 import java.awt.image.BufferedImage;
 
 public class VideoExtractor extends Extractor {
@@ -18,14 +15,12 @@ public class VideoExtractor extends Extractor {
         this.height = this.frameGrabber.getImageHeight();
     }
 
-    public BufferedImage getFrameImage(long framen) {
-        Frame frame = this.getFrame(framen);
-        Java2DFrameConverter converter = new Java2DFrameConverter();
-        return converter.convert(frame);
+    public BufferedImage getBufferedImage(long framen) {
+        return (BufferedImage) this.getFrame(framen);
     }
 
-    public BufferedImage getFrameImageByMili(long mili) {
-        return this.getFrameImage(miliToFrame(mili));
+    public BufferedImage getBufferedImageByMili(long mili) {
+        return this.getBufferedImage(miliToFrame(mili));
     }
 
     public int getWidth() {
