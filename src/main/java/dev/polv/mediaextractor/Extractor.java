@@ -79,8 +79,13 @@ public abstract class Extractor {
     }
 
     public void changeCurrentFrame(long newFrame) {
-        this.frameCount.set(Math.min(Math.max(newFrame, 0), this.maxFrameCount));
-        this.cacheCheck();
+        try {
+            this.frameGrabber.setVideoFrameNumber((int) newFrame);
+            this.frameCount.set(Math.min(Math.max(newFrame, 0), this.maxFrameCount));
+            this.cacheCheck();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
