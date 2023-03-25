@@ -82,7 +82,6 @@ public abstract class Extractor {
         try {
             this.frameGrabber.setVideoFrameNumber((int) newFrame);
             this.frameCount.set(Math.min(Math.max(newFrame, 0), this.maxFrameCount));
-            this.cacheCheck();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -95,8 +94,8 @@ public abstract class Extractor {
         this.changeCurrentFrame(miliToFrame(newTime));
     }
 
-    public void startCaching() {
-        /*Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
+    /*public void startCaching() {
+        Thread t = new Thread(() -> this.cacheFramesThread(((int) framerate)*CACHE_SECONDS));
         this.cachingThreads.add(t);
         t.start();
         new Thread(() -> {
@@ -115,7 +114,7 @@ public abstract class Extractor {
                     this.frameCacheTime.remove(frame);
                 }
             }
-        }).start();*/
+        }).start();
         // System.out.println("Caching frames");
         // System.out.println("framerate: " + this.framerate);
         // System.out.println("maxframe: " + this.maxFrameCount);
@@ -129,7 +128,7 @@ public abstract class Extractor {
             return;
 
         this.startCaching();
-    }
+    }*/
 
     public void stop() {
         this.cachingThreads.forEach(Thread::interrupt);
@@ -150,26 +149,26 @@ public abstract class Extractor {
         Frame frame = this.frameCache.get(framen);
         this.frameCacheTime.put(framen, System.currentTimeMillis());
         if (frame == null) {
-            this.frameCount.set(Math.min(Math.max(framen, 0), this.maxFrameCount));
-            startCaching();
+            if (framen != this.frameCount.get()) {
+                this.changeCurrentFrame(framen);
+            }
             this.cacheFramesThread(1);
             while (frame == null) {
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(5);
                     frame = this.frameCache.get(framen);
-                    if (frame != null) {
-                        if (frame.samples == null || frame.samples.length == 0) {
-                            frame = null;
-                        }
+                    if (frame == null || (audio && (frame.samples == null || frame.samples.length == 0)) || (!audio && frame.image == null)) {
+                        continue;
                     }
+                    break;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        if (framen+((CACHE_SECONDS*1000)/2) >= this.frameCount.get())
-            this.startCaching();
+        /*if (framen+((CACHE_SECONDS*1000)/2) >= this.frameCount.get())
+            this.startCaching();*/
 
         return frame;
     }
